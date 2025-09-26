@@ -12,6 +12,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ Přepneme běhové JDK na 17 (nutné pro sdkmanager/cmdline-tools)
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -20,11 +27,10 @@ jobs:
       - name: Install buildozer
         run: |
           sudo apt-get update
-          sudo apt-get install -y zip unzip curl openjdk-17-jdk
+          sudo apt-get install -y zip unzip curl
           python -m pip install --upgrade pip
           pip install cython buildozer
 
-      # ⬇⬇⬇ DŮLEŽITÉ – nainstalujeme cmdline-tools + build-tools (obsahuje AIDL) ⬇⬇⬇
       - name: Prepare Android SDK (aidl)
         env:
           SDK: ${{ github.workspace }}/.android-sdk
@@ -36,12 +42,11 @@ jobs:
           mv cmdline-tools latest
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" \
-            "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+            "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;25.2.9519653"
 
           echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
           echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
           echo "$SDK/platform-tools" >> $GITHUB_PATH
-      # ⬆⬆⬆
 
       - name: Build APK
         env:
