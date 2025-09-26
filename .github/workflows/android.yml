@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ✅ Přepneme běhové JDK na 17 (nutné pro sdkmanager/cmdline-tools)
+      # Java 17 je nutná pro sdkmanager (cmdline-tools)
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -31,7 +31,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install cython buildozer
 
-      - name: Prepare Android SDK (aidl)
+      # Připravíme Android SDK mimo Buildozer (vlastní složka), přijmeme licence a doinstalujeme Build-Tools 36.1.0
+      - name: Prepare Android SDK (with licenses)
         env:
           SDK: ${{ github.workspace }}/.android-sdk
         run: |
@@ -40,18 +41,35 @@ jobs:
           curl -fo cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q cmdline-tools.zip
           mv cmdline-tools latest
+
+          # Přijmout licence a nainstalovat potřebné balíčky (včetně build-tools 36.1.0 a NDK)
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" \
-            "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;25.2.9519653"
+            "platform-tools" "platforms;android-35" "build-tools;36.1.0" "ndk;25.2.9519653"
 
+          # Nastavíme proměnné prostředí
           echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
           echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
+          echo "ANDROIDSDK=$SDK" >> $GITHUB_ENV
+          echo "ANDROIDNDK=$SDK/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "ANDROIDAPI=35" >> $GITHUB_ENV
+          echo "ANDROIDMINAPI=24" >> $GITHUB_ENV
           echo "$SDK/platform-tools" >> $GITHUB_PATH
+
+          # Buildozer čeká SDK tady – uděláme symlink na náš předinstalovaný SDK
+          mkdir -p "$HOME/.buildozer/android/platform"
+          ln -s "$SDK" "$HOME/.buildozer/android/platform/android-sdk"
 
       - name: Build APK
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
+          ANDROIDSDK: ${{ env.ANDROIDSDK }}
+          ANDROIDNDK: ${{ env.ANDROIDNDK }}
+          ANDROIDAPI: ${{ env.ANDROIDAPI }}
+          ANDROIDMINAPI: ${{ env.ANDROIDMINAPI }}
+          # volitelně můžeme dát jasně najevo, že licence jsou ok:
+          ANDROID_ACCEPT_SDK_LICENSES: 'y'
         run: |
           buildozer android debug
 
