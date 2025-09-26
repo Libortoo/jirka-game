@@ -21,6 +21,7 @@ warn_on_root = 0
 
 [android]
 # minimal
+android.numeric_version = 10000   # 1*10000 + 0*100 + 0
 android.api = 35
 android.minapi = 24
 android.archs = arm64-v8a, armeabi-v7a
