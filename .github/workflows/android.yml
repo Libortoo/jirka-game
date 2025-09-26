@@ -5,49 +5,58 @@ on:
   push:
     branches: [ main ]
 
+env:
+  # 👇 Nastav cestu k projektu (adresář, kde je main.py a buildozer.spec)
+  PROJECT_DIR: jirka-game
+
 jobs:
   build-apk:
     runs-on: ubuntu-22.04
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Java 17 je nutná pro sdkmanager (cmdline-tools)
+      # Java 17 je potřeba pro moderní sdkmanager (cmdline-tools)
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install buildozer
+      - name: Install Buildozer (and basics)
         run: |
           sudo apt-get update
           sudo apt-get install -y zip unzip curl
           python -m pip install --upgrade pip
           pip install cython buildozer
 
-      # Připravíme Android SDK mimo Buildozer (vlastní složka), přijmeme licence a doinstalujeme Build-Tools 36.1.0
+      # Připravíme Android SDK mimo Buildozer, přijmeme licence a doinstalujeme vše potřebné.
       - name: Prepare Android SDK (with licenses)
         env:
           SDK: ${{ github.workspace }}/.android-sdk
         run: |
+          set -eux
           mkdir -p "$SDK/cmdline-tools"
           cd "$SDK/cmdline-tools"
           curl -fo cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q cmdline-tools.zip
           mv cmdline-tools latest
 
-          # Přijmout licence a nainstalovat potřebné balíčky (včetně build-tools 36.1.0 a NDK)
+          # Přijmout licence + instalace balíků, které Buildozer/p4a očekává
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" \
-            "platform-tools" "platforms;android-35" "build-tools;36.1.0" "ndk;25.2.9519653"
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;36.1.0" \
+            "ndk;25.2.9519653"
 
-          # Nastavíme proměnné prostředí
+          # Export proměnných prostředí (pro p4a/buildozer)
           echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
           echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
           echo "ANDROIDSDK=$SDK" >> $GITHUB_ENV
@@ -56,11 +65,25 @@ jobs:
           echo "ANDROIDMINAPI=24" >> $GITHUB_ENV
           echo "$SDK/platform-tools" >> $GITHUB_PATH
 
-          # Buildozer čeká SDK tady – uděláme symlink na náš předinstalovaný SDK
+          # ---------- COMPAT SHIM pro Buildozer (očekává legacy tools/bin/sdkmanager) ----------
           mkdir -p "$HOME/.buildozer/android/platform"
+          rm -rf "$HOME/.buildozer/android/platform/android-sdk" || true
           ln -s "$SDK" "$HOME/.buildozer/android/platform/android-sdk"
 
-      - name: Build APK
+          mkdir -p "$HOME/.buildozer/android/platform/android-sdk/tools/bin"
+          ln -sf "$SDK/cmdline-tools/latest/bin/sdkmanager" "$HOME/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager"
+          ln -sf "$SDK/cmdline-tools/latest/bin/avdmanager" "$HOME/.buildozer/android/platform/android-sdk/tools/bin/avdmanager" || true
+
+          ln -sfn "$SDK/build-tools"     "$HOME/.buildozer/android/platform/android-sdk/build-tools"
+          ln -sfn "$SDK/platforms"       "$HOME/.buildozer/android/platform/android-sdk/platforms"
+          ln -sfn "$SDK/platform-tools"  "$HOME/.buildozer/android/platform/android-sdk/platform-tools"
+          ln -sfn "$SDK/ndk"             "$HOME/.buildozer/android/platform/android-sdk/ndk"
+
+      - name: Show Buildozer version
+        run: buildozer --version
+
+      - name: Build APK (debug)
+        working-directory: ${{ env.PROJECT_DIR }}
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_HOME: ${{ env.ANDROID_HOME }}
@@ -68,7 +91,6 @@ jobs:
           ANDROIDNDK: ${{ env.ANDROIDNDK }}
           ANDROIDAPI: ${{ env.ANDROIDAPI }}
           ANDROIDMINAPI: ${{ env.ANDROIDMINAPI }}
-          # volitelně můžeme dát jasně najevo, že licence jsou ok:
           ANDROID_ACCEPT_SDK_LICENSES: 'y'
         run: |
           buildozer android debug
@@ -77,4 +99,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: JirkaKara-android-apk
-          path: bin/*.apk
+          path: ${{ env.PROJECT_DIR }}/bin/*.apk
