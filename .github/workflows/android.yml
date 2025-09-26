@@ -7,7 +7,7 @@ on:
 
 env:
   # 👇 Nastav cestu k projektu (adresář, kde je main.py a buildozer.spec)
-  PROJECT_DIR: jirka-game
+  PROJECT_DIR: .
 
 jobs:
   build-apk:
