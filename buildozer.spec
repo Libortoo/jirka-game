@@ -2,6 +2,7 @@
 title = JirkaKara
 package.name = jirka_kara
 package.domain = org.example
+version = 1.0.0
 source.dir = .
 source.include_exts = py,png,jpg,jpeg,mp3,wav,ogg,mpeg
 fullscreen = 0
