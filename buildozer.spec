@@ -7,7 +7,7 @@ source.dir = .
 source.include_exts = py,png,jpg,jpeg,mp3,wav,ogg,mpeg
 fullscreen = 1
 orientation = landscape
-requirements = python3, kivy==2.3.0, pyjnius==1.6.1, cython<3
+requirements = python3, kivy==2.3.0, pyjnius==1.6.1, cython==3.0.0
 source = start_squat.png,start_bed.png,start_jail.png,stranskej.png,goal_cil.png, WhatsApp Audio 2025-09-26 at 15.13.18.mpeg, fail1.mpeg, fail2.mpeg, fail3.mpeg
 
 [buildozer]
