@@ -36,7 +36,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install cython buildozer
 
-      # Připravíme Android SDK mimo Buildozer, přijmeme licence a doinstalujeme vše potřebné.
       - name: Prepare Android SDK (with licenses)
         env:
           SDK: ${{ github.workspace }}/.android-sdk
@@ -48,7 +47,6 @@ jobs:
           unzip -q cmdline-tools.zip
           mv cmdline-tools latest
 
-          # Přijmout licence + instalace balíků, které Buildozer/p4a očekává
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" \
             "platform-tools" \
@@ -56,7 +54,6 @@ jobs:
             "build-tools;36.1.0" \
             "ndk;25.2.9519653"
 
-          # Export proměnných prostředí (pro p4a/buildozer)
           echo "ANDROID_SDK_ROOT=$SDK" >> $GITHUB_ENV
           echo "ANDROID_HOME=$SDK" >> $GITHUB_ENV
           echo "ANDROIDSDK=$SDK" >> $GITHUB_ENV
@@ -65,7 +62,6 @@ jobs:
           echo "ANDROIDMINAPI=24" >> $GITHUB_ENV
           echo "$SDK/platform-tools" >> $GITHUB_PATH
 
-          # ---------- COMPAT SHIM pro Buildozer (očekává legacy tools/bin/sdkmanager) ----------
           mkdir -p "$HOME/.buildozer/android/platform"
           rm -rf "$HOME/.buildozer/android/platform/android-sdk" || true
           ln -s "$SDK" "$HOME/.buildozer/android/platform/android-sdk"
